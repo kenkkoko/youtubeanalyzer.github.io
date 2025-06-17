@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube 觀看習慣分析器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            background: linear-gradient(45deg, #ff6600, #ff8533);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(255, 102, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed #ff6600;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #ff8533;
+            background: rgba(255, 102, 0, 0.1);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #ff6600, #ff8533);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 102, 0, 0.3);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 102, 0, 0.4);
+        }
+
+        .demo-btn {
+            background: rgba(255, 102, 0, 0.2);
+            color: #ff6600;
+            padding: 10px 20px;
+            border: 1px solid #ff6600;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-left: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .demo-btn:hover {
+            background: rgba(255, 102, 0, 0.3);
+            color: #ff8533;
+        }
+
+        .takeout-link {
+            display: inline-block;
+            background: linear-gradient(45deg, #ff6600, #ff8533);
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 8px rgba(255, 102, 0, 0.3);
+        }
+
+        .takeout-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 102, 0, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+
+        .results {
+            display: none;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 102, 0, 0.1), rgba(255, 133, 51, 0.05));
+            border: 1px solid rgba(255, 102, 0, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #ff6600;
+            box-shadow: 0 10px 25px rgba(255, 102, 0, 0.2);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ff6600;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 102, 0, 0.5);
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .chart-section {
+            margin-bottom: 40px;
+        }
+
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 102, 0, 0.2);
+        }
+
+        .chart-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #ff6600;
+            text-align: center;
+        }
+
+        .personality-section {
+            background: linear-gradient(135deg, rgba(255, 102, 0, 0.15), rgba(255, 133, 51, 0.1));
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            border: 2px solid rgba(255, 102, 0, 0.3);
+        }
+
+        .personality-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6600, #ff8533);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 3em;
+            box-shadow: 0 10px 30px rgba(255, 102, 0, 0.4);
+        }
+
+        .personality-title {
+            font-size: 2.2em;
+            color: #ff6600;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(255, 102, 0, 0.3);
+        }
+
+        .personality-description {
+            font-size: 1.2em;
+            line-height: 1.8;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .top-channels {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 102, 0, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #ff6600;
+        }
+
+        .channel-rank {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ff6600;
+            margin-right: 20px;
+            min-width: 30px;
+        }
+
+        .channel-info {
+            flex: 1;
+        }
+
+        .channel-name {
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+
+        .channel-count {
+            color: #ff8533;
+            opacity: 0.8;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #ff6600;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 102, 0, 0.3);
+            border-top: 3px solid #ff6600;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 YouTube 觀看習慣分析器</h1>
+            <p>探索你的觀看偏好，發現你的獨特觀眾角色</p>
+        </div>
+
+        <div class="upload-section">
+            <h3>📊 上傳你的 YouTube 觀看記錄</h3>
+            <p style="margin: 20px 0; opacity: 0.8;">請上傳從 Google Takeout 下載的 YouTube 觀看記錄檔案</p>
+            
+            <div style="margin: 15px 0; padding: 10px; background: rgba(255, 102, 0, 0.1); border-radius: 8px; border: 1px solid rgba(255, 102, 0, 0.3);">
+                <p style="margin-bottom: 8px; color: #ff8533; font-size: 0.9em;">💡 如何取得觀看記錄：</p>
+                <p style="margin-bottom: 10px; font-size: 0.85em; opacity: 0.9;">
+                    1. 前往 Google Takeout → 2. 選擇 YouTube → 3. 下載並解壓縮 → 4. 上傳 watch-history.html
+                </p>
+                <a href="https://takeout.google.com/settings/takeout" target="_blank" class="takeout-link">
+                    🔗 前往 Google Takeout
+                </a>
+            </div>
+            
+            <input type="file" id="fileInput" class="file-input" accept=".html,.json">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                選擇檔案
+            </button>
+            <button class="demo-btn" onclick="loadDemoData()">
+                使用示範資料
+            </button>
+        </div>
+
+        <div id="results" class="results">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalVideos">0</div>
+                    <div class="stat-label">總觀看影片數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="uniqueChannels">0</div>
+                    <div class="stat-label">不同頻道數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgPerDay">0</div>
+                    <div class="stat-label">平均每日觀看</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="topCategory">-</div>
+                    <div class="stat-label">最愛類別</div>
+                </div>
+            </div>
+
+            <div class="top-channels">
+                <h3 class="chart-title">🏆 最常觀看的頻道 TOP 10</h3>
+                <div id="topChannelsList"></div>
+            </div>
+
+            <div class="chart-section">
+                <div class="chart-container">
+                    <h3 class="chart-title">📈 觀看類別分析</h3>
+                    <canvas id="categoryChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3 class="chart-title">📅 每月觀看趨勢</h3>
+                    <canvas id="timeChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <div class="personality-section">
+                <div class="personality-avatar" id="personalityAvatar">🎭</div>
+                <h2 class="personality-title" id="personalityTitle">分析中...</h2>
+                <p class="personality-description" id="personalityDescription">正在根據你的觀看習慣分析你的獨特觀眾角色...</p>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>正在分析你的觀看數據...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        let watchData = [];
+        let categoryChart = null;
+        let timeChart = null;
+
+        // HTML 解析函數
+        function parseHTMLWatchHistory(htmlContent) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+            const watchData = [];
+            
+            console.log('開始解析 YouTube 觀看記錄 HTML 檔案...');
+            
+            // 查找所有具有 content-cell 類的單元格
+            const cells = doc.querySelectorAll('.content-cell.mdl-cell');
+            console.log(`找到 ${cells.length} 個 content-cell 元素`);
+            
+            // 將單元格按組分組（每個觀看記錄通常包含多個相鄰的單元格）
+            const groups = [];
+            let currentGroup = [];
+            
+            cells.forEach((cell, index) => {
+                const text = cell.textContent.trim();
+                
+                // 如果單元格包含 YouTube 連結，開始新的組
+                const youtubeLink = cell.querySelector('a[href*="youtube.com/watch"], a[href*="youtu.be"]');
+                if (youtubeLink) {
+                    if (currentGroup.length > 0) {
+                        groups.push(currentGroup);
+                    }
+                    currentGroup = [cell];
+                } else if (currentGroup.length > 0) {
+                    // 將相鄰的單元格加入當前組
+                    currentGroup.push(cell);
+                    
+                    // 如果下一個單元格包含 YouTube 連結或已到末尾，結束當前組
+                    const nextCell = cells[index + 1];
+                    if (!nextCell || nextCell.querySelector('a[href*="youtube.com/watch"], a[href*="youtu.be"]')) {
+                        groups.push(currentGroup);
+                        currentGroup = [];
+                    }
+                }
+            });
+            
+            // 處理最後一組
+            if (currentGroup.length > 0) {
+                groups.push(currentGroup);
+            }
+            
+            console.log(`識別出 ${groups.length} 個觀看記錄組`);
+            
+            // 處理每個組
+            groups.forEach((group, groupIndex) => {
+                try {
+                    let title = '';
+                    let url = '';
+                    let channelName = '';
+                    let timeStr = '';
+                    
+                    group.forEach(cell => {
+                        const text = cell.textContent.trim();
+                        
+                        // 尋找 YouTube 連結
+                        const youtubeLink = cell.querySelector('a[href*="youtube.com/watch"], a[href*="youtu.be"]');
+                        if (youtubeLink) {
+                            title = youtubeLink.textContent.trim();
+                            url = youtubeLink.href;
+                        }
+                        
+                        // 檢查是否為頻道名稱（通常包含其他連結或特定格式）
+                        const otherLink = cell.querySelector('a:not([href*="youtube.com/watch"]):not([href*="youtu.be"])');
+                        if (otherLink && !title) {
+                            channelName = otherLink.textContent.trim();
+                        } else if (!youtubeLink && !otherLink && text && !isTimeString(text)) {
+                            // 如果沒有連結但有文本，可能是頻道名稱
+                            if (!channelName || channelName.length < text.length) {
+                                channelName = text;
+                            }
+                        }
+                        
+                        // 檢查是否為時間字符串
+                        if (isTimeString(text)) {
+                            timeStr = text;
+                        }
+                    });
+                    
+                    // 清理和驗證數據
+                    if (title && !title.includes('已觀看已移除的影片') && 
+                        !title.includes('Watched a video that has been removed')) {
+                        
+                        const time = timeStr ? parseTimeString(timeStr) : new Date().toISOString();
+                        
+                        watchData.push({
+                            title: title,
+                            titleUrl: url || '',
+                            subtitles: [{
+                                name: channelName || '',
+                                url: ''
+                            }],
+                            time: time
+                        });
+                        
+                        console.log(`成功解析記錄 ${groupIndex + 1}: ${title.substring(0, 50)}...`);
+                    }
+                } catch (e) {
+                    console.warn(`解析第 ${groupIndex + 1} 組時發生錯誤:`, e);
+                }
+            });
+            
+            console.log(`HTML 解析完成，總共找到 ${watchData.length} 筆有效觀看記錄`);
+            
+            if (watchData.length === 0) {
+                throw new Error('無法從 HTML 檔案中找到觀看記錄。請確認這是正確的 YouTube 觀看記錄檔案。');
+            }
+            
+            return watchData;
+        }
+        
+        // 判斷字符串是否為時間格式
+        function isTimeString(text) {
+            if (!text) return false;
+            
+            // 匹配各種時間格式
+            const timePatterns = [
+                /\d{4}年\d{1,2}月\d{1,2}日/,  // 中文日期格式
+                /\d{1,2}\/\d{1,2}\/\d{4}/,     // MM/DD/YYYY
+                /\d{4}-\d{2}-\d{2}/,           // YYYY-MM-DD
+                /\w{3}\s+\d{1,2},\s+\d{4}/,    // Jan 15, 2024
+                /\d{1,2}:\d{2}:\d{2}/          // 時間格式
+            ];
+            
+            return timePatterns.some(pattern => pattern.test(text));
+        }
+        
+        // 解析時間字符串
+        function parseTimeString(timeString) {
+            try {
+                // 移除多餘空白
+                timeString = timeString.trim();
+                
+                // 中文日期格式：2024年1月15日 下午 2:30:45
+                const chinesePattern = /(\d{4})年(\d{1,2})月(\d{1,2})日\s*(上午|下午)?\s*(\d{1,2}):(\d{2}):(\d{2})/;
+                const chineseMatch = timeString.match(chinesePattern);
+                
+                if (chineseMatch) {
+                    const [, year, month, day, period, hour, minute, second] = chineseMatch;
+                    let hour24 = parseInt(hour);
+                    
+                    if (period === '下午' && hour24 !== 12) {
+                        hour24 += 12;
+                    } else if (period === '上午' && hour24 === 12) {
+                        hour24 = 0;
+                    }
+                    
+                    const date = new Date(year, month - 1, day, hour24, minute, second);
+                    return date.toISOString();
+                }
+                
+                // 嘗試其他格式
+                const date = new Date(timeString);
+                if (!isNaN(date.getTime())) {
+                    return date.toISOString();
+                }
+                
+                // 如果無法解析，返回當前時間
+                return new Date().toISOString();
+            } catch (e) {
+                console.warn('時間解析失敗:', timeString, e);
+                return new Date().toISOString();
+            }
+        }
+
+        function parseChineseDateTime(timeString) {
+            return parseTimeString(timeString);
+        }
+        
+        function extractTimeFromText(text) {
+            // 從文本中提取時間信息的輔助函數
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            
+            for (const line of lines) {
+                if (isTimeString(line)) {
+                    return parseTimeString(line);
+                }
+            }
+            
+            return new Date().toISOString();
+        }
+
+        // 觀眾角色定義
+        const personalityTypes = {
+            entertainment: {
+                name: "娛樂追求者",
+                avatar: "🎪",
+                description: "你是個天生的娛樂愛好者！總是在尋找有趣、搞笑的內容來放鬆心情。你的觀看清單充滿了綜藝節目、搞笑影片和輕鬆的娛樂內容。你懂得如何在忙碌的生活中為自己創造快樂時光。"
+            },
+            education: {
+                name: "知識探索家",
+                avatar: "🎓",
+                description: "你是一位求知慾旺盛的學習者！總是渴望獲得新知識和技能。從科學解說到歷史紀錄片，你的觀看記錄展現了對世界的好奇心。你相信學習是一生的旅程，每個影片都是成長的機會。"
+            },
+            gaming: {
+                name: "遊戲冒險家",
+                avatar: "🎮",
+                description: "你是遊戲世界的探險者！無論是遊戲實況、攻略教學還是電競比賽，你都熱愛著虛擬世界的刺激與挑戰。你享受遊戲帶來的樂趣，也關注遊戲產業的最新動態。"
+            },
+            music: {
+                name: "音樂靈魂",
+                avatar: "🎵",
+                description: "音樂是你生活的soundtrack！你的觀看記錄充滿了音樂影片、演唱會和音樂相關內容。音樂不只是娛樂，更是你表達情感和連接世界的方式。你對音樂的熱愛感染著身邊的每個人。"
+            },
+            tech: {
+                name: "科技先鋒",
+                avatar: "🔬",
+                description: "你是科技趨勢的引領者！總是關注最新的科技發展、產品評測和創新技術。你對未來充滿好奇，喜歡探索科技如何改變我們的生活。你的觀點總是前瞻且具有洞察力。"
+            },
+            lifestyle: {
+                name: "生活美學家",
+                avatar: "🌸",
+                description: "你追求生活的品質與美感！從美食烹飪到居家佈置，從時尚穿搭到旅行vlog，你關注生活的每個細節。你相信生活可以很美好，並且樂於分享和學習如何讓生活更精彩。"
+            },
+            news: {
+                name: "資訊獵手",
+                avatar: "📰",
+                description: "你是消息最靈通的人！總是關注時事新聞、社會議題和世界動態。你有敏銳的觀察力和批判思維，喜歡深入了解事件的來龍去脈。你是朋友圈中的資訊中心。"
+            },
+            mixed: {
+                name: "全方位觀眾",
+                avatar: "🌟",
+                description: "你是一位興趣廣泛的多元觀眾！不拘泥於單一類型的內容，你的觀看記錄展現了對世界的全面好奇心。從娛樂到教育，從科技到生活，你都能找到樂趣。你的開放心態讓你擁有豐富的視野。"
+            }
+        };
+
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                showLoading(true);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        let data;
+                        const content = e.target.result;
+                        
+                        // 檢查檔案類型
+                        if (file.name.toLowerCase().endsWith('.html')) {
+                            // 解析 HTML 格式的觀看記錄
+                            data = parseHTMLWatchHistory(content);
+                        } else if (file.name.toLowerCase().endsWith('.json')) {
+                            // 解析 JSON 格式
+                            data = JSON.parse(content);
+                        } else {
+                            throw new Error('不支援的檔案格式');
+                        }
+                        
+                        processYouTubeData(data);
+                    } catch (error) {
+                        showError('檔案格式錯誤：' + error.message);
+                        showLoading(false);
+                    }
+                };
+                reader.readAsText(file, 'utf-8');
+            }
+        }
+
+        function loadDemoData() {
+            showLoading(true);
+            // 模擬延遲
+            setTimeout(() => {
+                const demoData = generateDemoData();
+                processYouTubeData(demoData);
+            }, 1500);
+        }
+
+        function generateDemoData() {
+            const channels = [
+                '志祺七七', 'PewDiePie', '阿滴英文', 'Kurzgesagt', '理科太太',
+                '囧星人', 'HowHow', '老高與小茉', '蔡阿嘎', '這群人'
+            ];
+            
+            const categories = ['教育', '娛樂', '遊戲', '音樂', '科技', '生活', '新聞'];
+            
+            const data = [];
+            const startDate = new Date('2023-01-01');
+            const endDate = new Date();
+            
+            for (let i = 0; i < 500; i++) {
+                const randomDate = new Date(startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime()));
+                const randomChannel = channels[Math.floor(Math.random() * channels.length)];
+                const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+                
+                data.push({
+                    title: `影片標題 ${i + 1}`,
+                    titleUrl: `https://youtube.com/watch?v=${i}`,
+                    subtitles: [{
+                        name: randomChannel,
+                        url: `https://youtube.com/channel/${i}`
+                    }],
+                    time: randomDate.toISOString(),
+                    category: randomCategory
+                });
+            }
+            
+            return data;
+        }
+
+        function processYouTubeData(data) {
+            try {
+                watchData = Array.isArray(data) ? data : [];
+                
+                if (watchData.length === 0) {
+                    showError('沒有找到觀看記錄資料');
+                    showLoading(false);
+                    return;
+                }
+
+                // 分析數據
+                const analysis = analyzeWatchData(watchData);
+                
+                // 更新統計
+                updateStats(analysis);
+                
+                // 顯示最常觀看的頻道
+                displayTopChannels(analysis.topChannels);
+                
+                // 創建圖表
+                createCharts(analysis);
+                
+                // 分析觀眾角色
+                const personality = determinePersonality(analysis);
+                displayPersonality(personality);
+                
+                // 顯示結果
+                document.getElementById('results').style.display = 'block';
+                showLoading(false);
+                
+            } catch (error) {
+                showError('資料處理時發生錯誤：' + error.message);
+                showLoading(false);
+            }
+        }
+
+        function analyzeWatchData(data) {
+            const channelCounts = {};
+            const categoryCounts = {};
+            const monthCounts = {};
+            
+            data.forEach(item => {
+                // 頻道統計
+                if (item.subtitles && item.subtitles[0]) {
+                    const channel = item.subtitles[0].name;
+                    channelCounts[channel] = (channelCounts[channel] || 0) + 1;
+                }
+                
+                // 類別統計（基於頻道名稱或影片標題推測）
+                const category = guessCategory(item);
+                categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+                
+                // 時間統計
+                if (item.time) {
+                    const date = new Date(item.time);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    monthCounts[monthKey] = (monthCounts[monthKey] || 0) + 1;
+                }
+            });
+            
+            // 排序頻道
+            const topChannels = Object.entries(channelCounts)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10);
+            
+            // 計算平均每日觀看數
+            const totalDays = Math.max(1, Math.ceil((new Date() - new Date(Math.min(...data.map(d => new Date(d.time || '2023-01-01'))))) / (1000 * 60 * 60 * 24)));
+            const avgPerDay = Math.round(data.length / totalDays * 10) / 10;
+            
+            return {
+                totalVideos: data.length,
+                uniqueChannels: Object.keys(channelCounts).length,
+                avgPerDay: avgPerDay,
+                topChannels: topChannels,
+                categoryCounts: categoryCounts,
+                monthCounts: monthCounts
+            };
+        }
+
+        function guessCategory(item) {
+            const title = (item.title || '').toLowerCase();
+            const channel = (item.subtitles && item.subtitles[0] ? item.subtitles[0].name : '').toLowerCase();
+            const text = title + ' ' + channel;
+            
+            if (text.includes('遊戲') || text.includes('game') || text.includes('gaming') || text.includes('實況')) return '遊戲';
+            if (text.includes('音樂') || text.includes('music') || text.includes('歌曲') || text.includes('演唱會')) return '音樂';
+            if (text.includes('教學') || text.includes('教育') || text.includes('學習') || text.includes('知識')) return '教育';
+            if (text.includes('科技') || text.includes('tech') || text.includes('評測') || text.includes('手機')) return '科技';
+            if (text.includes('新聞') || text.includes('news') || text.includes('時事') || text.includes('政治')) return '新聞';
+            if (text.includes('美食') || text.includes('旅行') || text.includes('生活') || text.includes('vlog')) return '生活';
+            
+            return '娛樂'; // 預設分類
+        }
+
+        function updateStats(analysis) {
+            document.getElementById('totalVideos').textContent = analysis.totalVideos.toLocaleString();
+            document.getElementById('uniqueChannels').textContent = analysis.uniqueChannels.toLocaleString();
+            document.getElementById('avgPerDay').textContent = analysis.avgPerDay;
+            
+            const topCategory = Object.entries(analysis.categoryCounts)
+                .sort(([,a], [,b]) => b - a)[0];
+            document.getElementById('topCategory').textContent = topCategory ? topCategory[0] : '-';
+        }
+
+        function displayTopChannels(topChannels) {
+            const container = document.getElementById('topChannelsList');
+            container.innerHTML = '';
+            
+            topChannels.forEach(([channel, count], index) => {
+                const item = document.createElement('div');
+                item.className = 'channel-item';
+                item.innerHTML = `
+                    <div class="channel-rank">#${index + 1}</div>
+                    <div class="channel-info">
+                        <div class="channel-name">${channel}</div>
+                        <div class="channel-count">${count} 部影片</div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function createCharts(analysis) {
+            // 類別圖表
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            if (categoryChart) categoryChart.destroy();
+            
+            const categoryLabels = Object.keys(analysis.categoryCounts);
+            const categoryData = Object.values(analysis.categoryCounts);
+            
+            categoryChart = new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        data: categoryData,
+                        backgroundColor: [
+                            '#ff6600', '#ff8533', '#ff9d4d', '#ffb366',
+                            '#ffc980', '#ffdf99', '#fff5b3', '#e6f2ff'
+                        ],
+                        borderColor: '#1a1a1a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 時間趨勢圖表
+            const timeCtx = document.getElementById('timeChart').getContext('2d');
+            if (timeChart) timeChart.destroy();
+            
+            const timeLabels = Object.keys(analysis.monthCounts).sort();
+            const timeData = timeLabels.map(label => analysis.monthCounts[label]);
+            
+            timeChart = new Chart(timeCtx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: '觀看數量',
+                        data: timeData,
+                        borderColor: '#ff6600',
+                        backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function determinePersonality(analysis) {
+            const categories = analysis.categoryCounts;
+            const sortedCategories = Object.entries(categories)
+                .sort(([,a], [,b]) => b - a);
+            
+            if (sortedCategories.length === 0) {
+                return personalityTypes.mixed;
+            }
+            
+            const topCategory = sortedCategories[0][0];
+            const topPercentage = sortedCategories[0][1] / analysis.totalVideos;
+            
+            // 如果最高類別佔比超過40%，則為該類別的專門觀眾
+            if (topPercentage > 0.4) {
+                switch (topCategory) {
+                    case '教育': return personalityTypes.education;
+                    case '遊戲': return personalityTypes.gaming;
+                    case '音樂': return personalityTypes.music;
+                    case '科技': return personalityTypes.tech;
+                    case '生活': return personalityTypes.lifestyle;
+                    case '新聞': return personalityTypes.news;
+                    default: return personalityTypes.entertainment;
+                }
+            }
+            
+            // 否則為多元觀眾
+            return personalityTypes.mixed;
+        }
+
+        function displayPersonality(personality) {
+            document.getElementById('personalityAvatar').textContent = personality.avatar;
+            document.getElementById('personalityTitle').textContent = personality.name;
+            document.getElementById('personalityDescription').textContent = personality.description;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
